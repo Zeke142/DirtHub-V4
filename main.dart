@@ -6,6 +6,7 @@ import 'pages/home_page.dart'; // Ensure you have this page created
 import 'pages/buyers_page.dart'; // Import BuyersPage
 import 'pages/sellers_page.dart'; // Import SellersPage
 import 'pages/transport_page.dart'; // Import TransportPage
+import 'pages/location_picker_page.dart'; // Import LocationPickerPage
 import 'config/firebase_options.dart'; // Import the generated Firebase options file
 
 void main() async {
@@ -27,11 +28,12 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login', // Set the initial route to the Sign In Page
       routes: {
         '/login': (context) => const SignInPage(), // Navigate to Sign In Page
-        '/signup': (context) => const SignUpPage(), // Navigate to Sign Up Page (added this route)
+        '/signup': (context) => const SignUpPage(), // Navigate to Sign Up Page
         '/home': (context) => const HomePage(), // Define your HomePage widget
         '/buyers': (context) => const BuyersPage(), // Navigate to Buyers Page
         '/sellers': (context) => const SellersPage(), // Navigate to Sellers Page
         '/transport': (context) => const TransportPage(), // Navigate to Transport Page
+        '/location_picker': (context) => const LocationPickerPage(), // Navigate to Location Picker Page
       },
     );
   }
