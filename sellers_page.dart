@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-import 'location_picker_page.dart'; // Import your location picker page
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'location_picker_page.dart';
+import 'package:geocoding/geocoding.dart'; // For converting address to coordinates
 
 class SellersPage extends StatefulWidget {
   const SellersPage({super.key});
@@ -17,11 +19,14 @@ class _SellersPageState extends State<SellersPage> {
   final TextEditingController _dirtTypeController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
 
   String _location = "Select Location";
   GeoPoint? _selectedLocation; // Geopoint object for storing location
+  LatLng? _mapPosition; // For displaying marker on the map
+  GoogleMapController? _mapController;
 
-  // Method to open location picker
+  // Method to open location picker for current location
   void _openLocationPicker() async {
     Navigator.push(
       context,
@@ -31,6 +36,8 @@ class _SellersPageState extends State<SellersPage> {
             setState(() {
               _location = "Location: ${position.latitude}, ${position.longitude}";
               _selectedLocation = GeoPoint(position.latitude, position.longitude);
+              _mapPosition = LatLng(position.latitude, position.longitude);
+              _mapController?.animateCamera(CameraUpdate.newLatLng(_mapPosition!));
             });
           },
         ),
@@ -38,9 +45,36 @@ class _SellersPageState extends State<SellersPage> {
     );
   }
 
+  // Method to convert address to GeoPoint
+  Future<void> _getLocationFromAddress() async {
+    try {
+      List<Location> locations = await locationFromAddress(_addressController.text);
+      if (locations.isNotEmpty) {
+        Location loc = locations.first;
+        setState(() {
+          _location = "Location: ${loc.latitude}, ${loc.longitude}";
+          _selectedLocation = GeoPoint(loc.latitude, loc.longitude);
+          _mapPosition = LatLng(loc.latitude, loc.longitude);
+          _mapController?.animateCamera(CameraUpdate.newLatLng(_mapPosition!));
+        });
+      }
+    } catch (e) {
+      print('Error getting location from address: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to get location from address')),
+      );
+    }
+  }
+
   // Method to submit data to Firestore
   Future<void> _submitData() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a location')),
+        );
+        return;
+      }
       try {
         await FirebaseFirestore.instance.collection('sellers').add({
           'dirtType': _dirtTypeController.text,
@@ -108,12 +142,43 @@ class _SellersPageState extends State<SellersPage> {
                   return null;
                 },
               ),
+              // Address input
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(labelText: 'Enter Address'),
+              ),
+              TextButton(
+                onPressed: _getLocationFromAddress,
+                child: const Text('Get Location from Address'),
+              ),
               // Location picker
               TextButton(
                 onPressed: _openLocationPicker,
-                child: const Text('Pick Location'),
+                child: const Text('Use Current Location'),
               ),
               Text(_location),
+              const SizedBox(height: 20),
+              // Google Map for visual location representation
+              _mapPosition != null
+                  ? Container(
+                      height: 300,
+                      child: GoogleMap(
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                        },
+                        initialCameraPosition: CameraPosition(
+                          target: _mapPosition!,
+                          zoom: 15,
+                        ),
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('selected-location'),
+                            position: _mapPosition!,
+                          ),
+                        },
+                      ),
+                    )
+                  : const SizedBox.shrink(),
               const SizedBox(height: 20),
               // Submit button
               ElevatedButton(
