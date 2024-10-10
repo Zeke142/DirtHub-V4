@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'location_picker_page.dart'; // Assuming you have the location picker in the same directory
 
 class SellerForm extends StatefulWidget {
   const SellerForm({Key? key}) : super(key: key);
@@ -13,16 +15,44 @@ class _SellerFormState extends State<SellerForm> {
   final TextEditingController _dirtTypeController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
+  Position? _selectedLocation; // Store selected location
 
+  // Method to handle location selection
+  void _pickLocation() async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerPage(
+          onLocationSelected: (Position position) {
+            setState(() {
+              _selectedLocation = position;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  // Method to submit the form
   Future<void> _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
+      // Validate that a location has been selected
+      if (_selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a location')),
+        );
+        return;
+      }
+
       // Add document to Firestore
       await FirebaseFirestore.instance.collection('sellers').add({
         'dirt_type': _dirtTypeController.text.trim(),
         'quantity': int.tryParse(_quantityController.text.trim()), // Ensure this is an integer
         'price': double.tryParse(_priceController.text.trim()), // Ensure this is a double
-        'location': _locationController.text.trim(),
+        'location': GeoPoint(
+          _selectedLocation!.latitude,
+          _selectedLocation!.longitude,
+        ), // Save as GeoPoint
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -30,8 +60,8 @@ class _SellerFormState extends State<SellerForm> {
       _dirtTypeController.clear();
       _quantityController.clear();
       _priceController.clear();
-      _locationController.clear();
-      
+      _selectedLocation = null;
+
       // Optional: Navigate back or show a success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Seller information submitted!')),
@@ -80,7 +110,7 @@ class _SellerFormState extends State<SellerForm> {
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price ($)'),
+                decoration: const InputDecoration(labelText: 'Price (\$)'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -93,15 +123,19 @@ class _SellerFormState extends State<SellerForm> {
                 },
               ),
               const SizedBox(height: 16.0),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a location';
-                  }
-                  return null;
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _pickLocation,
+                      child: Text(
+                        _selectedLocation == null
+                            ? 'Pick Location'
+                            : 'Location: ${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16.0),
               ElevatedButton(
