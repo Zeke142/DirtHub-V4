@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-import 'location_picker_page.dart'; // Import the location picker page
+import 'location_picker_page.dart'; // Import your location picker page
 
 class SellersPage extends StatefulWidget {
-  const SellersPage({super.key}); // Kept 'key' as super parameter
+  const SellersPage({super.key});
 
   @override
   _SellersPageState createState() => _SellersPageState();
 }
 
 class _SellersPageState extends State<SellersPage> {
-  String _location = "Select Location";
-  String _selectedDirtType = 'Topsoil'; // Default dirt type
+  final _formKey = GlobalKey<FormState>();
+
+  // Controllers for form inputs
+  final TextEditingController _dirtTypeController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
 
+  String _location = "Select Location";
+  GeoPoint? _selectedLocation; // Geopoint object for storing location
+
+  // Method to open location picker
   void _openLocationPicker() async {
-    // Navigate to the location picker page
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -24,6 +30,7 @@ class _SellersPageState extends State<SellersPage> {
           onLocationSelected: (Position position) {
             setState(() {
               _location = "Location: ${position.latitude}, ${position.longitude}";
+              _selectedLocation = GeoPoint(position.latitude, position.longitude);
             });
           },
         ),
@@ -31,107 +38,90 @@ class _SellersPageState extends State<SellersPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _quantityController.dispose();
-    _priceController.dispose();
-    super.dispose();
+  // Method to submit data to Firestore
+  Future<void> _submitData() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await FirebaseFirestore.instance.collection('sellers').add({
+          'dirtType': _dirtTypeController.text,
+          'quantity': int.parse(_quantityController.text),
+          'price': double.parse(_priceController.text),
+          'location': _selectedLocation, // Add the location as GeoPoint
+        });
+        print('Data submitted successfully');
+      } catch (e) {
+        print('Error submitting data: $e');
+      }
+    } else {
+      print('Form is not valid');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sellers Page'),
-      ),
+      appBar: AppBar(title: const Text('Sellers Page')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: Text('This is the Sellers Page'), // Existing text from original SellersPage
-            ),
-            const SizedBox(height: 20),
-
-            // Location Picker
-            TextButton(
-              onPressed: _openLocationPicker,
-              child: const Text('Pick Location'),
-            ),
-            Text(_location),
-            const SizedBox(height: 20),
-
-            // Dirt Type Dropdown
-            const Text('Dirt Type:'),
-            DropdownButton<String>(
-              value: _selectedDirtType,
-              items: <String>['Topsoil', 'Clay', 'Sand', 'Gravel', 'Silt'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedDirtType = newValue!;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Quantity Input
-            const Text('Quantity (cu. yds.):'),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _quantityController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter quantity',
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 8.0),
-                  child: Text('cu. yds.'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Price Input
-            const Text('Price:'),
-            Row(
-              children: [
-                const Text('\$'),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: TextFormField(
-                    controller: _priceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter price',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Submit Button (For adding seller data later)
-            ElevatedButton(
-              onPressed: () {
-                // Add functionality here for submitting data
-                print('Dirt Type: $_selectedDirtType');
-                print('Quantity: ${_quantityController.text}');
-                print('Price: ${_priceController.text}');
-                print('Location: $_location');
-              },
-              child: const Text('Submit'),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Dirt type input
+              TextFormField(
+                controller: _dirtTypeController,
+                decoration: const InputDecoration(labelText: 'Dirt Type'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a dirt type';
+                  }
+                  return null;
+                },
+              ),
+              // Quantity input
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Quantity (cu. yds.)'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a quantity';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'Quantity must be a number';
+                  }
+                  return null;
+                },
+              ),
+              // Price input
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: 'Price (\$)'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a price';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Price must be a valid number';
+                  }
+                  return null;
+                },
+              ),
+              // Location picker
+              TextButton(
+                onPressed: _openLocationPicker,
+                child: const Text('Pick Location'),
+              ),
+              Text(_location),
+              const SizedBox(height: 20),
+              // Submit button
+              ElevatedButton(
+                onPressed: _submitData,
+                child: const Text('Submit'),
+              ),
+            ],
+          ),
         ),
       ),
     );
