@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SellerForm extends StatefulWidget {
-  const SellerForm({super.key});
+  const SellerForm({Key? key}) : super(key: key);
 
   @override
   _SellerFormState createState() => _SellerFormState();
@@ -9,21 +10,33 @@ class SellerForm extends StatefulWidget {
 
 class _SellerFormState extends State<SellerForm> {
   final _formKey = GlobalKey<FormState>();
-
+  final TextEditingController _dirtTypeController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
-  // Dirt type dropdown items
-  final List<String> _dirtTypes = ['Topsoil', 'Fill Dirt', 'Clay', 'Sand', 'Gravel'];
-  String? _selectedDirtType;
+  Future<void> _submitForm() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      // Add document to Firestore
+      await FirebaseFirestore.instance.collection('sellers').add({
+        'dirt_type': _dirtTypeController.text.trim(),
+        'quantity': int.tryParse(_quantityController.text.trim()), // Ensure this is an integer
+        'price': double.tryParse(_priceController.text.trim()), // Ensure this is a double
+        'location': _locationController.text.trim(),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-  @override
-  void dispose() {
-    _quantityController.dispose();
-    _priceController.dispose();
-    _locationController.dispose();
-    super.dispose();
+      // Clear the fields after submission
+      _dirtTypeController.clear();
+      _quantityController.clear();
+      _priceController.clear();
+      _locationController.clear();
+      
+      // Optional: Navigate back or show a success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seller information submitted!')),
+      );
+    }
   }
 
   @override
@@ -37,92 +50,62 @@ class _SellerFormState extends State<SellerForm> {
         child: Form(
           key: _formKey,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Dropdown for Dirt Type
-              DropdownButtonFormField<String>(
+              TextFormField(
+                controller: _dirtTypeController,
                 decoration: const InputDecoration(labelText: 'Dirt Type'),
-                value: _selectedDirtType,
-                items: _dirtTypes.map((String type) {
-                  return DropdownMenuItem<String>(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedDirtType = newValue;
-                  });
-                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please select the dirt type';
+                    return 'Please enter a dirt type';
                   }
                   return null;
                 },
               ),
-
               const SizedBox(height: 16.0),
-
-              // Text input for Quantity with "cu. yds." suffix
               TextFormField(
                 controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Quantity (cu. yds.)'),
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Quantity',
-                  suffixText: 'cu. yds.', // Fixed text at the end
-                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the quantity';
+                    return 'Please enter a quantity';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'Please enter a valid number';
                   }
                   return null;
                 },
               ),
-
               const SizedBox(height: 16.0),
-
-              // Text input for Price with "$" prefix
               TextFormField(
                 controller: _priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Price',
-                  prefixText: '\$', // Fixed $ sign before the input
-                ),
+                decoration: const InputDecoration(labelText: 'Price ($)'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the price';
+                    return 'Please enter a price';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid price';
                   }
                   return null;
                 },
               ),
-
               const SizedBox(height: 16.0),
-
-              // Text input for Location
               TextFormField(
                 controller: _locationController,
                 decoration: const InputDecoration(labelText: 'Location'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the location';
+                    return 'Please enter a location';
                   }
                   return null;
                 },
               ),
-
-              const SizedBox(height: 20),
-
-              // Submit Button
+              const SizedBox(height: 16.0),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Handle form submission (e.g., save to database)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Processing Data')),
-                    );
-                  }
-                },
+                onPressed: _submitForm,
                 child: const Text('Submit'),
               ),
             ],
