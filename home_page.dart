@@ -23,12 +23,19 @@ class _HomePageState extends State<HomePage> {
           ElevatedButton(
             onPressed: () async {
               // Navigate to the Location Picker Page and wait for the result
-              final position = await Navigator.pushNamed(context, '/location_picker');
-              if (position != null) {
-                setState(() {
-                  selectedPosition = position; // Update the selected position
-                });
-              }
+              final position = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LocationPickerPage(
+                    onLocationSelected: (LatLng position) {
+                      // Handle the selected position here
+                      setState(() {
+                        selectedPosition = position; // Save the selected position
+                      });
+                    },
+                  ),
+                ),
+              );
             },
             child: const Text('Pick Location'),
           ),
@@ -52,7 +59,7 @@ class _HomePageState extends State<HomePage> {
             child: const Text('Go to Transport Page'),
           ),
           // Display Google Map or message if no location is selected
-          if (selectedPosition != null) 
+          if (selectedPosition != null)
             Expanded(
               child: GoogleMap(
                 initialCameraPosition: CameraPosition(
