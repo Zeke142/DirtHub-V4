@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationPickerPage extends StatefulWidget {
-  final Function(Position) onLocationSelected;
+  final Function(LatLng) onLocationSelected; // Changed from Position to LatLng
 
   const LocationPickerPage({Key? key, required this.onLocationSelected}) : super(key: key);
 
@@ -33,24 +33,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     });
   }
 
-  // Submit selected location back to the SellersPage
+  // Submit selected location back to the HomePage
   void _submitSelectedLocation() {
     if (_selectedLatLng != null) {
-      // Create a Position object to pass to the callback
-      final selectedPosition = Position(
-        latitude: _selectedLatLng!.latitude,
-        longitude: _selectedLatLng!.longitude,
-        timestamp: DateTime.now(),
-        accuracy: 0.0,
-        altitude: 0.0,
-        altitudeAccuracy: 0.0, // Include altitudeAccuracy
-        heading: 0.0,
-        headingAccuracy: 0.0, // Add headingAccuracy to resolve the error
-        speed: 0.0,
-        speedAccuracy: 0.0,
-      );
-      widget.onLocationSelected(selectedPosition);
-      Navigator.pop(context); // Navigate back to SellersPage
+      // Call the onLocationSelected callback with the selected LatLng
+      widget.onLocationSelected(_selectedLatLng!);
+      Navigator.pop(context); // Navigate back to HomePage
     } else {
       print('No location selected');
     }
