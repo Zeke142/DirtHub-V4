@@ -43,8 +43,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         timestamp: DateTime.now(),
         accuracy: 0.0,
         altitude: 0.0,
-        altitudeAccuracy: 0.0, // Add this field
+        altitudeAccuracy: 0.0, // Include altitudeAccuracy
         heading: 0.0,
+        headingAccuracy: 0.0, // Add headingAccuracy to resolve the error
         speed: 0.0,
         speedAccuracy: 0.0,
       );
