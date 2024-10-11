@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
         '/location_picker': (context) => LocationPickerPage(
           onLocationSelected: (position) {
             // Handle the selected position here
-            print("Position selected: $position");
+            Navigator.of(context).pop(position); // Pass the selected position back to the previous page
           },
         ), // Navigate to Location Picker Page with onLocationSelected parameter
       },
