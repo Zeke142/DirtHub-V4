@@ -28,21 +28,22 @@ class _SellersPageState extends State<SellersPage> {
 
   // Method to open location picker for current location
   void _openLocationPicker() async {
-    Navigator.push(
+    // Navigate to the Location Picker Page and wait for the result
+    final Position? position = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LocationPickerPage(
-          onLocationSelected: (Position position) {
-            setState(() {
-              _location = "Location: ${position.latitude}, ${position.longitude}";
-              _selectedLocation = GeoPoint(position.latitude, position.longitude);
-              _mapPosition = LatLng(position.latitude, position.longitude);
-              _mapController?.animateCamera(CameraUpdate.newLatLng(_mapPosition!));
-            });
-          },
-        ),
+        builder: (context) => LocationPickerPage(),
       ),
     );
+
+    if (position != null) {
+      setState(() {
+        _location = "Location: ${position.latitude}, ${position.longitude}";
+        _selectedLocation = GeoPoint(position.latitude, position.longitude);
+        _mapPosition = LatLng(position.latitude, position.longitude);
+        _mapController?.animateCamera(CameraUpdate.newLatLng(_mapPosition!));
+      });
+    }
   }
 
   // Method to convert address to GeoPoint
@@ -83,6 +84,16 @@ class _SellersPageState extends State<SellersPage> {
           'location': _selectedLocation, // Add the location as GeoPoint
         });
         print('Data submitted successfully');
+        // Clear fields after successful submission
+        _dirtTypeController.clear();
+        _quantityController.clear();
+        _priceController.clear();
+        _addressController.clear();
+        setState(() {
+          _location = "Select Location"; // Reset location
+          _selectedLocation = null; // Clear selected location
+          _mapPosition = null; // Clear map position
+        });
       } catch (e) {
         print('Error submitting data: $e');
       }
