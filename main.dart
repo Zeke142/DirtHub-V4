@@ -33,7 +33,12 @@ class MyApp extends StatelessWidget {
         '/buyers': (context) => const BuyersPage(), // Navigate to Buyers Page
         '/sellers': (context) => const SellersPage(), // Navigate to Sellers Page
         '/transport': (context) => const TransportPage(), // Navigate to Transport Page
-        '/location_picker': (context) => const LocationPickerPage(), // Navigate to Location Picker Page
+        '/location_picker': (context) => LocationPickerPage(
+          onLocationSelected: (position) {
+            // Handle the selected position here
+            print("Position selected: $position");
+          },
+        ), // Navigate to Location Picker Page with onLocationSelected parameter
       },
     );
   }
